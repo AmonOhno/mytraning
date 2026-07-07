@@ -1,5 +1,5 @@
 import type { TrainingRecord } from '../types'
-import { recordVolume } from '../lib/stats'
+import { formatHMS, recordVolume } from '../lib/stats'
 
 interface Props {
   records: TrainingRecord[]
@@ -41,7 +41,9 @@ export default function RecordList({ records, onEdit, onDelete }: Props) {
               {r.strength.map((ex, i) => (
                 <li key={i}>
                   {ex.name}:{' '}
-                  {ex.sets.map((s) => `${s.weightKg}kg×${s.reps}`).join(', ')}
+                  {ex.sets
+                    .map((s) => (s.seconds != null ? `${s.seconds}秒` : `${s.weightKg}kg×${s.reps}`))
+                    .join(', ')}
                 </li>
               ))}
             </ul>
@@ -50,7 +52,8 @@ export default function RecordList({ records, onEdit, onDelete }: Props) {
             <ul>
               {r.cardio.map((c, i) => (
                 <li key={i}>
-                  {c.kind}: {c.minutes}分{c.distanceKm != null ? ` / ${c.distanceKm}km` : ''}
+                  {c.kind}: {formatHMS(c.durationSec)}
+                  {c.distanceKm != null ? ` / ${c.distanceKm}km` : ''}
                 </li>
               ))}
             </ul>

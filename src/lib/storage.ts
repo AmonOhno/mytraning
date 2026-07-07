@@ -1,14 +1,33 @@
-import type { AppSettings, TrainingRecord } from '../types'
+import type { AppSettings, CardioSession, TrainingRecord } from '../types'
 
 const RECORDS_KEY = 'mytraining.records'
 const SETTINGS_KEY = 'mytraining.settings'
+
+/** 旧形式(seconds なしのセット / minutes ベースの有酸素)を現行形式へ変換 */
+function migrateRecord(r: TrainingRecord): TrainingRecord {
+  return {
+    ...r,
+    strength: (r.strength ?? []).map((ex) => ({
+      ...ex,
+      sets: ex.sets.map((s) => ({ ...s, seconds: s.seconds ?? null })),
+    })),
+    cardio: (r.cardio ?? []).map((c) => {
+      const legacyMinutes = (c as unknown as { minutes?: number }).minutes
+      const { minutes: _drop, ...rest } = c as CardioSession & { minutes?: number }
+      return {
+        ...rest,
+        durationSec: c.durationSec ?? Math.round((legacyMinutes ?? 0) * 60),
+      }
+    }),
+  }
+}
 
 export function loadRecords(): TrainingRecord[] {
   try {
     const raw = localStorage.getItem(RECORDS_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
+    return Array.isArray(parsed) ? parsed.map(migrateRecord) : []
   } catch {
     return []
   }
