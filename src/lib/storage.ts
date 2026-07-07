@@ -1,0 +1,56 @@
+import type { AppSettings, TrainingRecord } from '../types'
+
+const RECORDS_KEY = 'mytraining.records'
+const SETTINGS_KEY = 'mytraining.settings'
+
+export function loadRecords(): TrainingRecord[] {
+  try {
+    const raw = localStorage.getItem(RECORDS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function persistRecords(records: TrainingRecord[]): void {
+  localStorage.setItem(RECORDS_KEY, JSON.stringify(records))
+}
+
+export function saveRecord(record: TrainingRecord): TrainingRecord[] {
+  const records = loadRecords()
+  const index = records.findIndex((r) => r.id === record.id)
+  if (index >= 0) {
+    records[index] = record
+  } else {
+    records.push(record)
+  }
+  records.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+  persistRecords(records)
+  return records
+}
+
+export function deleteRecord(id: string): TrainingRecord[] {
+  const records = loadRecords().filter((r) => r.id !== id)
+  persistRecords(records)
+  return records
+}
+
+export function loadSettings(): AppSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return { myosWebhookUrl: '' }
+    return { myosWebhookUrl: '', ...JSON.parse(raw) }
+  } catch {
+    return { myosWebhookUrl: '' }
+  }
+}
+
+export function saveSettings(settings: AppSettings): void {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+}
+
+export function newId(): string {
+  return crypto.randomUUID()
+}
