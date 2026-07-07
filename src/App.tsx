@@ -4,6 +4,7 @@ import {
   deleteRecord,
   loadRecords,
   loadSettings,
+  mergeRecordsForDate,
   saveRecord,
   saveSettings,
 } from './lib/storage'
@@ -32,6 +33,14 @@ export default function App() {
   const handleDelete = (id: string) => {
     setRecords(deleteRecord(id))
     if (editing?.id === id) setEditing(null)
+  }
+
+  const handleMergeDate = (date: string) => {
+    const next = mergeRecordsForDate(date)
+    setRecords(next)
+    if (editing && editing.date === date && !next.some((r) => r.id === editing.id)) {
+      setEditing(null)
+    }
   }
 
   const handleEdit = (record: TrainingRecord) => {
@@ -67,7 +76,12 @@ export default function App() {
         {tab === 'history' && (
           <>
             <Summary records={records} />
-            <RecordList records={records} onEdit={handleEdit} onDelete={handleDelete} />
+            <RecordList
+              records={records}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onMergeDate={handleMergeDate}
+            />
           </>
         )}
         {tab === 'settings' && (
