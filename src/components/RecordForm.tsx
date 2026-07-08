@@ -15,8 +15,17 @@ function todayString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const emptyExercise = (): StrengthExercise => ({ name: '', sets: [{ weightKg: 0, reps: 0 }] })
-const emptyCardio = (): CardioSession => ({ kind: '', minutes: 0, distanceKm: null })
+const emptyExercise = (): StrengthExercise => ({
+  name: '',
+  sets: [{ weightKg: 0, reps: 0, seconds: null }],
+})
+const emptyCardio = (): CardioSession => ({ kind: '', durationSec: 0, distanceKm: null })
+
+const splitHMS = (totalSec: number) => ({
+  h: Math.floor(totalSec / 3600),
+  m: Math.floor((totalSec % 3600) / 60),
+  s: totalSec % 60,
+})
 
 export default function RecordForm({
   editing,
@@ -50,7 +59,12 @@ export default function RecordForm({
     setStrength((prev) => prev.map((ex, idx) => (idx === i ? { ...ex, ...patch } : ex)))
   }
 
-  const updateSet = (exIdx: number, setIdx: number, field: 'weightKg' | 'reps', value: string) => {
+  const updateSet = (
+    exIdx: number,
+    setIdx: number,
+    field: 'weightKg' | 'reps' | 'seconds',
+    value: string,
+  ) => {
     setStrength((prev) =>
       prev.map((ex, i) =>
         i === exIdx
@@ -65,8 +79,35 @@ export default function RecordForm({
     )
   }
 
+  const setSetMode = (exIdx: number, setIdx: number, mode: 'weight' | 'time') => {
+    setStrength((prev) =>
+      prev.map((ex, i) =>
+        i === exIdx
+          ? {
+              ...ex,
+              sets: ex.sets.map((s, j) =>
+                j === setIdx
+                  ? { weightKg: 0, reps: 0, seconds: mode === 'time' ? 0 : null }
+                  : s,
+              ),
+            }
+          : ex,
+      ),
+    )
+  }
+
   const updateCardio = (i: number, patch: Partial<CardioSession>) => {
     setCardio((prev) => prev.map((c, idx) => (idx === i ? { ...c, ...patch } : c)))
+  }
+
+  const updateCardioTime = (i: number, part: 'h' | 'm' | 's', value: string) => {
+    setCardio((prev) =>
+      prev.map((c, idx) => {
+        if (idx !== i) return c
+        const parts = { ...splitHMS(c.durationSec), [part]: Number(value) || 0 }
+        return { ...c, durationSec: parts.h * 3600 + parts.m * 60 + parts.s }
+      }),
+    )
   }
 
   const handleSubmit = () => {
@@ -75,11 +116,15 @@ export default function RecordForm({
       return
     }
     const cleanStrength = strength
-      .map((ex) => ({ ...ex, name: ex.name.trim(), sets: ex.sets.filter((s) => s.reps > 0) }))
+      .map((ex) => ({
+        ...ex,
+        name: ex.name.trim(),
+        sets: ex.sets.filter((s) => (s.seconds != null ? s.seconds > 0 : s.reps > 0)),
+      }))
       .filter((ex) => ex.name && ex.sets.length > 0)
     const cleanCardio = cardio
       .map((c) => ({ ...c, kind: c.kind.trim() }))
-      .filter((c) => c.kind && c.minutes > 0)
+      .filter((c) => c.kind && c.durationSec > 0)
 
     const hasContent =
       cleanStrength.length > 0 || cleanCardio.length > 0 || bodyWeight || sleepHours || memo.trim()
@@ -139,24 +184,58 @@ export default function RecordForm({
             {ex.sets.map((s, j) => (
               <div className="row set-row" key={j}>
                 <span className="set-label">{j + 1}セット目</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  placeholder="kg"
-                  value={s.weightKg || ''}
-                  onChange={(e) => updateSet(i, j, 'weightKg', e.target.value)}
-                />
-                <span>kg ×</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  placeholder="回"
-                  value={s.reps || ''}
-                  onChange={(e) => updateSet(i, j, 'reps', e.target.value)}
-                />
-                <span>回</span>
+                <div className="mode-toggle" role="radiogroup" aria-label="入力方式">
+                  <button
+                    type="button"
+                    className={s.seconds == null ? 'mode selected' : 'mode'}
+                    aria-pressed={s.seconds == null}
+                    onClick={() => setSetMode(i, j, 'weight')}
+                  >
+                    kg×回
+                  </button>
+                  <button
+                    type="button"
+                    className={s.seconds != null ? 'mode selected' : 'mode'}
+                    aria-pressed={s.seconds != null}
+                    onClick={() => setSetMode(i, j, 'time')}
+                  >
+                    秒
+                  </button>
+                </div>
+                {s.seconds == null ? (
+                  <>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      placeholder="kg"
+                      value={s.weightKg || ''}
+                      onChange={(e) => updateSet(i, j, 'weightKg', e.target.value)}
+                    />
+                    <span>kg ×</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      placeholder="回"
+                      value={s.reps || ''}
+                      onChange={(e) => updateSet(i, j, 'reps', e.target.value)}
+                    />
+                    <span>回</span>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      placeholder="秒"
+                      value={s.seconds || ''}
+                      onChange={(e) => updateSet(i, j, 'seconds', e.target.value)}
+                    />
+                    <span>秒</span>
+                  </>
+                )}
               </div>
             ))}
             <button
@@ -207,11 +286,35 @@ export default function RecordForm({
                 type="number"
                 inputMode="numeric"
                 min="0"
-                placeholder="分"
-                value={c.minutes || ''}
-                onChange={(e) => updateCardio(i, { minutes: Number(e.target.value) || 0 })}
+                placeholder="時"
+                aria-label="時間"
+                value={splitHMS(c.durationSec).h || ''}
+                onChange={(e) => updateCardioTime(i, 'h', e.target.value)}
               />
-              <span>分</span>
+              <span>:</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="59"
+                placeholder="分"
+                aria-label="分"
+                value={splitHMS(c.durationSec).m || ''}
+                onChange={(e) => updateCardioTime(i, 'm', e.target.value)}
+              />
+              <span>:</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="59"
+                placeholder="秒"
+                aria-label="秒"
+                value={splitHMS(c.durationSec).s || ''}
+                onChange={(e) => updateCardioTime(i, 's', e.target.value)}
+              />
+            </div>
+            <div className="row set-row">
               <input
                 type="number"
                 inputMode="decimal"

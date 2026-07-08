@@ -35,11 +35,18 @@ export function weeklySummary(records: TrainingRecord[], today = new Date()): We
   return {
     trainingDays,
     totalVolumeKg: inRange.reduce((sum, r) => sum + recordVolume(r), 0),
-    cardioMinutes: inRange.reduce(
-      (sum, r) => sum + r.cardio.reduce((s, c) => s + c.minutes, 0),
-      0,
+    cardioMinutes: Math.round(
+      inRange.reduce((sum, r) => sum + r.cardio.reduce((s, c) => s + c.durationSec, 0), 0) / 60,
     ),
   }
+}
+
+/** 秒数を H:MM:SS 形式にフォーマット */
+export function formatHMS(totalSec: number): string {
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 /** 過去に入力された種目名(新しい記録優先・重複なし) */

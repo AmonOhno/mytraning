@@ -1,6 +1,8 @@
 export interface ExerciseSet {
   weightKg: number
   reps: number
+  /** 秒数ベースのセット(プランク等)。null の場合は重さ×回数 */
+  seconds: number | null
 }
 
 export interface StrengthExercise {
@@ -10,7 +12,8 @@ export interface StrengthExercise {
 
 export interface CardioSession {
   kind: string
-  minutes: number
+  /** 合計時間(秒)。入力 UI は H:MM:SS */
+  durationSec: number
   distanceKm: number | null
 }
 

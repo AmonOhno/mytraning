@@ -1,26 +1,47 @@
 import type { TrainingRecord } from '../types'
-import { recordVolume } from '../lib/stats'
+import { formatHMS, recordVolume } from '../lib/stats'
 
 interface Props {
   records: TrainingRecord[]
   onEdit: (record: TrainingRecord) => void
   onDelete: (id: string) => void
+  onMergeDate: (date: string) => void
 }
 
 const FATIGUE_LABELS = ['', '絶好調', '好調', '普通', '疲れ気味', '極度の疲労']
 
-export default function RecordList({ records, onEdit, onDelete }: Props) {
+export default function RecordList({ records, onEdit, onDelete, onMergeDate }: Props) {
   if (records.length === 0) {
     return <p className="empty">まだ記録がありません。「入力」タブから記録を追加しましょう。</p>
   }
 
+  const dateCounts = new Map<string, number>()
+  for (const r of records) {
+    dateCounts.set(r.date, (dateCounts.get(r.date) ?? 0) + 1)
+  }
+
   return (
     <div className="record-list">
-      {records.map((r) => (
+      {records.map((r, idx) => (
         <div className="card record" key={r.id}>
           <div className="record-header">
             <strong>{r.date}</strong>
             <div className="row">
+              {(dateCounts.get(r.date) ?? 0) > 1 &&
+                records.findIndex((x) => x.date === r.date) === idx && (
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => {
+                      const n = dateCounts.get(r.date) ?? 0
+                      if (confirm(`${r.date} の ${n} 件の記録を1つに統合しますか?`)) {
+                        onMergeDate(r.date)
+                      }
+                    }}
+                  >
+                    統合
+                  </button>
+                )}
               <button type="button" className="ghost" onClick={() => onEdit(r)}>
                 編集
               </button>
@@ -41,7 +62,9 @@ export default function RecordList({ records, onEdit, onDelete }: Props) {
               {r.strength.map((ex, i) => (
                 <li key={i}>
                   {ex.name}:{' '}
-                  {ex.sets.map((s) => `${s.weightKg}kg×${s.reps}`).join(', ')}
+                  {ex.sets
+                    .map((s) => (s.seconds != null ? `${s.seconds}秒` : `${s.weightKg}kg×${s.reps}`))
+                    .join(', ')}
                 </li>
               ))}
             </ul>
@@ -50,7 +73,8 @@ export default function RecordList({ records, onEdit, onDelete }: Props) {
             <ul>
               {r.cardio.map((c, i) => (
                 <li key={i}>
-                  {c.kind}: {c.minutes}分{c.distanceKm != null ? ` / ${c.distanceKm}km` : ''}
+                  {c.kind}: {formatHMS(c.durationSec)}
+                  {c.distanceKm != null ? ` / ${c.distanceKm}km` : ''}
                 </li>
               ))}
             </ul>
