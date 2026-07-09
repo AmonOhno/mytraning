@@ -1,7 +1,8 @@
-import type { AppSettings, CardioSession, TrainingRecord } from '../types'
+import type { AppSettings, CardioSession, Goals, PeriodGoal, TrainingRecord } from '../types'
 
 const RECORDS_KEY = 'mytraining.records'
 const SETTINGS_KEY = 'mytraining.settings'
+const GOALS_KEY = 'mytraining.goals'
 
 /** 旧形式(seconds なしのセット / minutes ベースの有酸素)を現行形式へ変換 */
 function migrateRecord(r: TrainingRecord): TrainingRecord {
@@ -117,6 +118,33 @@ export function loadSettings(): AppSettings {
 
 export function saveSettings(settings: AppSettings): void {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+}
+
+function emptyPeriodGoal(): PeriodGoal {
+  return { volumeKg: null, cardioMinutes: null, trainingDays: null }
+}
+
+export function defaultGoals(): Goals {
+  return { daily: emptyPeriodGoal(), weekly: emptyPeriodGoal(), monthly: emptyPeriodGoal() }
+}
+
+export function loadGoals(): Goals {
+  try {
+    const raw = localStorage.getItem(GOALS_KEY)
+    if (!raw) return defaultGoals()
+    const parsed = JSON.parse(raw) as Partial<Record<keyof Goals, Partial<PeriodGoal>>>
+    return {
+      daily: { ...emptyPeriodGoal(), ...parsed.daily },
+      weekly: { ...emptyPeriodGoal(), ...parsed.weekly },
+      monthly: { ...emptyPeriodGoal(), ...parsed.monthly },
+    }
+  } catch {
+    return defaultGoals()
+  }
+}
+
+export function saveGoals(goals: Goals): void {
+  localStorage.setItem(GOALS_KEY, JSON.stringify(goals))
 }
 
 export function newId(): string {

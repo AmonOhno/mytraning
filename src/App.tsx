@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
-import type { AppSettings, TrainingRecord } from './types'
+import type { AppSettings, Goals, TrainingRecord } from './types'
 import {
   deleteRecord,
+  loadGoals,
   loadRecords,
   loadSettings,
   mergeRecordsForDate,
+  saveGoals,
   saveRecord,
   saveSettings,
 } from './lib/storage'
@@ -13,13 +15,15 @@ import RecordForm from './components/RecordForm'
 import RecordList from './components/RecordList'
 import Summary from './components/Summary'
 import Stats from './components/Stats'
+import GoalsTab from './components/Goals'
 import Settings from './components/Settings'
 
-type Tab = 'input' | 'history' | 'stats' | 'settings'
+type Tab = 'input' | 'history' | 'stats' | 'goals' | 'settings'
 
 export default function App() {
   const [records, setRecords] = useState<TrainingRecord[]>(() => loadRecords())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
+  const [goals, setGoals] = useState<Goals>(() => loadGoals())
   const [tab, setTab] = useState<Tab>('input')
   const [editing, setEditing] = useState<TrainingRecord | null>(null)
 
@@ -54,6 +58,11 @@ export default function App() {
     setSettings(next)
   }
 
+  const handleSaveGoals = (next: Goals) => {
+    saveGoals(next)
+    setGoals(next)
+  }
+
   return (
     <div className="app">
       <header>
@@ -86,6 +95,7 @@ export default function App() {
           </>
         )}
         {tab === 'stats' && <Stats records={records} />}
+        {tab === 'goals' && <GoalsTab goals={goals} records={records} onSave={handleSaveGoals} />}
         {tab === 'settings' && (
           <Settings settings={settings} records={records} onSaveSettings={handleSaveSettings} />
         )}
@@ -112,6 +122,13 @@ export default function App() {
           onClick={() => setTab('stats')}
         >
           統計
+        </button>
+        <button
+          type="button"
+          className={tab === 'goals' ? 'active' : ''}
+          onClick={() => setTab('goals')}
+        >
+          目標
         </button>
         <button
           type="button"
