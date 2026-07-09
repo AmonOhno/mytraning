@@ -23,11 +23,14 @@ export function downloadExport(records: TrainingRecord[]): void {
 export async function sendToMyos(
   webhookUrl: string,
   records: TrainingRecord[],
+  apiToken = '',
 ): Promise<{ ok: boolean; message: string }> {
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (apiToken) headers.Authorization = `Bearer ${apiToken}`
     const res = await fetch(webhookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(buildExport(records)),
     })
     if (res.ok) {

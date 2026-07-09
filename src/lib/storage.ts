@@ -106,12 +106,13 @@ export function deleteRecord(id: string): TrainingRecord[] {
 }
 
 export function loadSettings(): AppSettings {
+  const defaults: AppSettings = { myosWebhookUrl: '', myosApiToken: '' }
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
-    if (!raw) return { myosWebhookUrl: '' }
-    return { myosWebhookUrl: '', ...JSON.parse(raw) }
+    if (!raw) return defaults
+    return { ...defaults, ...JSON.parse(raw) }
   } catch {
-    return { myosWebhookUrl: '' }
+    return defaults
   }
 }
 

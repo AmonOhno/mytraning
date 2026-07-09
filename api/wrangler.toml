@@ -1,0 +1,10 @@
+# MyOS 連携用 参照 API(Cloudflare Worker)
+# デプロイ手順は docs/04_MyOS連携仕様.md を参照。
+name = "mytraining-api"
+main = "worker.ts"
+compatibility_date = "2026-07-01"
+
+[[kv_namespaces]]
+binding = "TRAINING_KV"
+# `npx wrangler kv namespace create TRAINING_KV` の出力 ID に置き換えること
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
