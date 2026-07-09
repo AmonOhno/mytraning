@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { AppSettings, TrainingRecord } from './types'
 import {
+  addExercises,
+  deleteExercise,
   deleteRecord,
+  loadExercises,
   loadRecords,
   loadSettings,
   mergeRecordsForDate,
   saveRecord,
   saveSettings,
 } from './lib/storage'
-import { knownExerciseNames } from './lib/stats'
 import RecordForm from './components/RecordForm'
 import RecordList from './components/RecordList'
 import Summary from './components/Summary'
@@ -19,15 +21,24 @@ type Tab = 'input' | 'history' | 'settings'
 export default function App() {
   const [records, setRecords] = useState<TrainingRecord[]>(() => loadRecords())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
+  const [exercises, setExercises] = useState<string[]>(() => loadExercises())
   const [tab, setTab] = useState<Tab>('input')
   const [editing, setEditing] = useState<TrainingRecord | null>(null)
 
-  const suggestions = useMemo(() => knownExerciseNames(records), [records])
-
   const handleSave = (record: TrainingRecord) => {
     setRecords(saveRecord(record))
+    // 新規入力された種目名をマスタへ自動登録する
+    setExercises(addExercises(record.strength.map((ex) => ex.name)))
     setEditing(null)
     setTab('history')
+  }
+
+  const handleAddExercise = (name: string) => {
+    setExercises(addExercises([name]))
+  }
+
+  const handleDeleteExercise = (name: string) => {
+    setExercises(deleteExercise(name))
   }
 
   const handleDelete = (id: string) => {
@@ -65,7 +76,7 @@ export default function App() {
             key={editing?.id ?? 'new'}
             editing={editing}
             existingDates={records.map((r) => r.date)}
-            exerciseNameSuggestions={suggestions}
+            exerciseMaster={exercises}
             onSave={handleSave}
             onCancel={() => {
               setEditing(null)
@@ -85,7 +96,14 @@ export default function App() {
           </>
         )}
         {tab === 'settings' && (
-          <Settings settings={settings} records={records} onSaveSettings={handleSaveSettings} />
+          <Settings
+            settings={settings}
+            records={records}
+            exercises={exercises}
+            onSaveSettings={handleSaveSettings}
+            onAddExercise={handleAddExercise}
+            onDeleteExercise={handleDeleteExercise}
+          />
         )}
       </main>
 
