@@ -20,6 +20,7 @@ export default function Settings({
   onDeleteExercise,
 }: Props) {
   const [url, setUrl] = useState(settings.myosWebhookUrl)
+  const [token, setToken] = useState(settings.myosApiToken)
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null)
   const [sending, setSending] = useState(false)
   const [newExercise, setNewExercise] = useState('')
@@ -44,7 +45,7 @@ export default function Settings({
     }
     setSending(true)
     setStatus(null)
-    const result = await sendToMyos(trimmed, records)
+    const result = await sendToMyos(trimmed, records, token.trim())
     setStatus(result)
     setSending(false)
   }
@@ -108,16 +109,25 @@ export default function Settings({
               onChange={(e) => setUrl(e.target.value)}
             />
           </label>
+          <label>
+            API トークン(任意)
+            <input
+              type="password"
+              placeholder="連携 API の Bearer トークン"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+          </label>
           <div className="row actions">
             <button
               type="button"
               className="ghost"
               onClick={() => {
-                onSaveSettings({ myosWebhookUrl: url.trim() })
-                setStatus({ ok: true, message: 'URL を保存しました' })
+                onSaveSettings({ myosWebhookUrl: url.trim(), myosApiToken: token.trim() })
+                setStatus({ ok: true, message: '設定を保存しました' })
               }}
             >
-              URL を保存
+              設定を保存
             </button>
             <button type="button" className="primary" disabled={sending} onClick={handleSend}>
               {sending ? '送信中…' : `MyOS へ送信 (${records.length}件)`}

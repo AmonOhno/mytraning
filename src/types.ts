@@ -49,6 +49,8 @@ export interface Goals {
 
 export interface AppSettings {
   myosWebhookUrl: string
+  /** 連携 API(Webhook 送信先)の Bearer トークン。空なら未認証で送信 */
+  myosApiToken: string
 }
 
 export interface MyosExport {
