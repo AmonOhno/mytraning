@@ -32,6 +32,21 @@ export interface TrainingRecord {
   updatedAt: string
 }
 
+export interface PeriodGoal {
+  /** 総ボリューム目標 (kg)。null は未設定 */
+  volumeKg: number | null
+  /** 有酸素時間目標(分)。null は未設定 */
+  cardioMinutes: number | null
+  /** トレーニング日数目標。null は未設定(今日の目標では使わない) */
+  trainingDays: number | null
+}
+
+export interface Goals {
+  daily: PeriodGoal
+  weekly: PeriodGoal
+  monthly: PeriodGoal
+}
+
 export interface AppSettings {
   myosWebhookUrl: string
   /** 連携 API(Webhook 送信先)の Bearer トークン。空なら未認証で送信 */

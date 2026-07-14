@@ -402,6 +402,64 @@ small {
   font-variant-numeric: tabular-nums;
 }
 
+.goal-range {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.goal-row {
+  margin: 12px 0;
+}
+
+.goal-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.goal-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-value.achieved {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.progress {
+  height: 8px;
+  margin-top: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+}
+
+.progress-fill.achieved {
+  background: var(--success);
+}
+
+.goal-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.goal-inputs label {
+  flex: 1;
+  margin-bottom: 0;
+}
+
 .tabbar {
   position: fixed;
   bottom: 0;
