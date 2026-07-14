@@ -14,9 +14,10 @@ import {
 import RecordForm from './components/RecordForm'
 import RecordList from './components/RecordList'
 import Summary from './components/Summary'
+import Stats from './components/Stats'
 import Settings from './components/Settings'
 
-type Tab = 'input' | 'history' | 'settings'
+type Tab = 'input' | 'history' | 'stats' | 'settings'
 
 export default function App() {
   const [records, setRecords] = useState<TrainingRecord[]>(() => loadRecords())
@@ -95,6 +96,7 @@ export default function App() {
             />
           </>
         )}
+        {tab === 'stats' && <Stats records={records} />}
         {tab === 'settings' && (
           <Settings
             settings={settings}
@@ -121,6 +123,13 @@ export default function App() {
           onClick={() => setTab('history')}
         >
           履歴
+        </button>
+        <button
+          type="button"
+          className={tab === 'stats' ? 'active' : ''}
+          onClick={() => setTab('stats')}
+        >
+          統計
         </button>
         <button
           type="button"

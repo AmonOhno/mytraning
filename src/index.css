@@ -347,6 +347,61 @@ small {
   color: var(--muted);
 }
 
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 8px;
+  touch-action: pan-y;
+}
+
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  font-size: 9px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  fill: var(--primary);
+  stroke: var(--card);
+  stroke-width: 2;
+}
+
+.chart-bar {
+  fill: var(--primary);
+}
+
+.chart-end-label {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip-box {
+  fill: var(--card);
+  stroke: var(--border);
+}
+
+.chart-tooltip-text {
+  font-size: 10px;
+  fill: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 .tabbar {
   position: fixed;
   bottom: 0;
