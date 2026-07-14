@@ -20,13 +20,8 @@ function toDateString(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-/** 直近7日間(今日を含む)のサマリー */
-export function weeklySummary(records: TrainingRecord[], today = new Date()): WeeklySummary {
-  const start = new Date(today)
-  start.setDate(start.getDate() - 6)
-  const from = toDateString(start)
-  const to = toDateString(today)
-
+/** 日付範囲(両端を含む)のサマリー */
+export function rangeSummary(records: TrainingRecord[], from: string, to: string): WeeklySummary {
   const inRange = records.filter((r) => r.date >= from && r.date <= to)
   const trainingDays = new Set(
     inRange.filter((r) => r.strength.length > 0 || r.cardio.length > 0).map((r) => r.date),
@@ -39,6 +34,39 @@ export function weeklySummary(records: TrainingRecord[], today = new Date()): We
       inRange.reduce((sum, r) => sum + r.cardio.reduce((s, c) => s + c.durationSec, 0), 0) / 60,
     ),
   }
+}
+
+/** 直近7日間(今日を含む)のサマリー */
+export function weeklySummary(records: TrainingRecord[], today = new Date()): WeeklySummary {
+  const start = new Date(today)
+  start.setDate(start.getDate() - 6)
+  return rangeSummary(records, toDateString(start), toDateString(today))
+}
+
+export type GoalPeriod = 'daily' | 'weekly' | 'monthly'
+
+/**
+ * 目標の対象期間(両端を含む)。
+ * daily=今日, weekly=今週(月曜起点・weeklyVolumes と同じ), monthly=今月(1日〜末日)
+ */
+export function goalPeriodRange(
+  period: GoalPeriod,
+  today = new Date(),
+): { from: string; to: string } {
+  if (period === 'daily') {
+    const d = toDateString(today)
+    return { from: d, to: d }
+  }
+  if (period === 'weekly') {
+    const start = new Date(today)
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+    const end = new Date(start)
+    end.setDate(end.getDate() + 6)
+    return { from: toDateString(start), to: toDateString(end) }
+  }
+  const start = new Date(today.getFullYear(), today.getMonth(), 1)
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  return { from: toDateString(start), to: toDateString(end) }
 }
 
 /** 秒数を H:MM:SS 形式にフォーマット */
