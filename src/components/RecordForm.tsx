@@ -5,10 +5,13 @@ import { newId } from '../lib/storage'
 interface Props {
   editing: TrainingRecord | null
   existingDates: string[]
-  exerciseNameSuggestions: string[]
+  exerciseMaster: string[]
   onSave: (record: TrainingRecord) => void
   onCancel: () => void
 }
+
+/** 種目セレクトで「新しい種目を追加」を表す特殊値 */
+const NEW_EXERCISE = '__new__'
 
 function todayString(): string {
   const d = new Date()
@@ -30,12 +33,14 @@ const splitHMS = (totalSec: number) => ({
 export default function RecordForm({
   editing,
   existingDates,
-  exerciseNameSuggestions,
+  exerciseMaster,
   onSave,
   onCancel,
 }: Props) {
   const [date, setDate] = useState(todayString())
   const [strength, setStrength] = useState<StrengthExercise[]>([])
+  /** strength と同じ並びで、名前をテキスト入力中(マスタ未登録の新種目)かどうか */
+  const [customName, setCustomName] = useState<boolean[]>([])
   const [cardio, setCardio] = useState<CardioSession[]>([])
   const [bodyWeight, setBodyWeight] = useState('')
   const [fatigue, setFatigue] = useState<Fatigue | null>(null)
@@ -47,6 +52,7 @@ export default function RecordForm({
     if (editing) {
       setDate(editing.date)
       setStrength(structuredClone(editing.strength))
+      setCustomName(editing.strength.map(() => false))
       setCardio(structuredClone(editing.cardio))
       setBodyWeight(editing.bodyWeightKg?.toString() ?? '')
       setFatigue(editing.fatigue)
@@ -57,6 +63,22 @@ export default function RecordForm({
 
   const updateExercise = (i: number, patch: Partial<StrengthExercise>) => {
     setStrength((prev) => prev.map((ex, idx) => (idx === i ? { ...ex, ...patch } : ex)))
+  }
+
+  const addExerciseRow = () => {
+    setStrength((p) => [...p, emptyExercise()])
+    // マスタが空のうちは最初からテキスト入力で始める
+    setCustomName((p) => [...p, exerciseMaster.length === 0])
+  }
+
+  const removeExerciseRow = (i: number) => {
+    setStrength((prev) => prev.filter((_, idx) => idx !== i))
+    setCustomName((prev) => prev.filter((_, idx) => idx !== i))
+  }
+
+  const setNameMode = (i: number, custom: boolean) => {
+    setCustomName((prev) => prev.map((c, idx) => (idx === i ? custom : c)))
+    updateExercise(i, { name: '' })
   }
 
   const updateSet = (
@@ -165,17 +187,48 @@ export default function RecordForm({
         {strength.map((ex, i) => (
           <div className="exercise" key={i}>
             <div className="row">
-              <input
-                type="text"
-                placeholder="種目名(例: ベンチプレス)"
-                value={ex.name}
-                list="exercise-names"
-                onChange={(e) => updateExercise(i, { name: e.target.value })}
-              />
+              {customName[i] ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="新しい種目名(例: ベンチプレス)"
+                    value={ex.name}
+                    onChange={(e) => updateExercise(i, { name: e.target.value })}
+                  />
+                  {exerciseMaster.length > 0 && (
+                    <button type="button" className="ghost" onClick={() => setNameMode(i, false)}>
+                      選択に戻る
+                    </button>
+                  )}
+                </>
+              ) : (
+                <select
+                  aria-label="種目名"
+                  value={ex.name}
+                  onChange={(e) => {
+                    if (e.target.value === NEW_EXERCISE) {
+                      setNameMode(i, true)
+                    } else {
+                      updateExercise(i, { name: e.target.value })
+                    }
+                  }}
+                >
+                  <option value="">種目を選択</option>
+                  {exerciseMaster.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                  {ex.name && !exerciseMaster.includes(ex.name) && (
+                    <option value={ex.name}>{ex.name}</option>
+                  )}
+                  <option value={NEW_EXERCISE}>＋ 新しい種目を追加</option>
+                </select>
+              )}
               <button
                 type="button"
                 className="ghost danger"
-                onClick={() => setStrength((prev) => prev.filter((_, idx) => idx !== i))}
+                onClick={() => removeExerciseRow(i)}
                 aria-label="種目を削除"
               >
                 削除
@@ -251,12 +304,7 @@ export default function RecordForm({
             </button>
           </div>
         ))}
-        <datalist id="exercise-names">
-          {exerciseNameSuggestions.map((n) => (
-            <option key={n} value={n} />
-          ))}
-        </datalist>
-        <button type="button" className="ghost" onClick={() => setStrength((p) => [...p, emptyExercise()])}>
+        <button type="button" className="ghost" onClick={addExerciseRow}>
           + 種目追加
         </button>
       </section>
