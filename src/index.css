@@ -93,8 +93,8 @@ label {
 }
 
 input,
-textarea,
-select {
+select,
+textarea {
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -108,10 +108,31 @@ select {
 }
 
 input:focus,
-textarea:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid var(--primary);
   outline-offset: -1px;
+}
+
+.row select {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.master-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.master-list .master-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .row {
@@ -238,6 +259,10 @@ button.fatigue.selected {
 }
 
 small {
+  color: var(--muted);
+}
+
+.muted {
   color: var(--muted);
 }
 

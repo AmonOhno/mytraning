@@ -1,7 +1,9 @@
 import type { AppSettings, CardioSession, TrainingRecord } from '../types'
+import { knownExerciseNames } from './stats'
 
 const RECORDS_KEY = 'mytraining.records'
 const SETTINGS_KEY = 'mytraining.settings'
+const EXERCISES_KEY = 'mytraining.exercises'
 
 /** 旧形式(seconds なしのセット / minutes ベースの有酸素)を現行形式へ変換 */
 function migrateRecord(r: TrainingRecord): TrainingRecord {
@@ -103,6 +105,46 @@ export function deleteRecord(id: string): TrainingRecord[] {
   const records = loadRecords().filter((r) => r.id !== id)
   persistRecords(records)
   return records
+}
+
+function persistExercises(names: string[]): void {
+  localStorage.setItem(EXERCISES_KEY, JSON.stringify(names))
+}
+
+/** 種目マスタを読み込む。未作成なら既存記録の種目名から自動生成する */
+export function loadExercises(): string[] {
+  try {
+    const raw = localStorage.getItem(EXERCISES_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((n): n is string => typeof n === 'string')
+      }
+    }
+  } catch {
+    // 壊れたデータは既存記録から再生成する
+  }
+  const seeded = knownExerciseNames(loadRecords())
+  persistExercises(seeded)
+  return seeded
+}
+
+/** マスタに未登録の種目名を追加する(重複・空文字は無視) */
+export function addExercises(names: string[]): string[] {
+  const exercises = loadExercises()
+  for (const name of names) {
+    const trimmed = name.trim()
+    if (trimmed && !exercises.includes(trimmed)) exercises.push(trimmed)
+  }
+  persistExercises(exercises)
+  return exercises
+}
+
+/** マスタから種目を削除する(過去の記録は変更しない) */
+export function deleteExercise(name: string): string[] {
+  const exercises = loadExercises().filter((n) => n !== name)
+  persistExercises(exercises)
+  return exercises
 }
 
 export function loadSettings(): AppSettings {
