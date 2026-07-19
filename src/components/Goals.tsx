@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import type { Goals, PeriodGoal, TrainingRecord } from '../types'
-import { goalPeriodRange, rangeSummary, type GoalPeriod, type WeeklySummary } from '../lib/stats'
+import {
+  goalPeriodRange,
+  rangeSummary,
+  recentGoalPeriodRanges,
+  type GoalPeriod,
+  type WeeklySummary,
+} from '../lib/stats'
 
 interface Props {
   goals: Goals
@@ -32,9 +38,45 @@ function metricsFor(period: GoalPeriod): Metric[] {
   return period === 'daily' ? METRICS.filter((m) => m.key !== 'trainingDays') : METRICS
 }
 
+/** 達成度履歴の表示期間数と件数の単位 */
+const HISTORY: Record<GoalPeriod, { count: number; unit: string }> = {
+  daily: { count: 7, unit: '日' },
+  weekly: { count: 8, unit: '週' },
+  monthly: { count: 6, unit: 'ヶ月' },
+}
+
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
+
 function shortDate(date: string): string {
   const [, m, d] = date.split('-')
   return `${Number(m)}/${Number(d)}`
+}
+
+function historyLabel(period: GoalPeriod, from: string, to: string, isCurrent: boolean): string {
+  if (isCurrent) {
+    return period === 'daily' ? '今日' : period === 'weekly' ? '今週' : '今月'
+  }
+  if (period === 'daily') {
+    const day = new Date(`${from}T00:00:00`).getDay()
+    return `${shortDate(from)}(${WEEKDAYS[day]})`
+  }
+  if (period === 'weekly') return `${shortDate(from)}〜${shortDate(to)}`
+  const [y, m] = from.split('-')
+  return `${y}/${Number(m)}`
+}
+
+interface HistoryMetric {
+  key: keyof PeriodGoal
+  label: string
+  percent: number
+  achieved: boolean
+}
+
+interface HistoryRow {
+  from: string
+  label: string
+  achieved: boolean
+  metrics: HistoryMetric[]
 }
 
 type Draft = Record<GoalPeriod, Record<keyof PeriodGoal, string>>
@@ -102,6 +144,37 @@ export default function GoalsTab({ goals, records, onSave }: Props) {
     return result
   }, [records])
 
+  const histories = useMemo(() => {
+    const result = {} as Record<GoalPeriod, HistoryRow[]>
+    for (const { key } of PERIODS) {
+      const active = metricsFor(key).filter((m) => goals[key][m.key] != null)
+      if (active.length === 0) {
+        result[key] = []
+        continue
+      }
+      result[key] = recentGoalPeriodRanges(key, HISTORY[key].count).map(({ from, to }, i) => {
+        const summary = rangeSummary(records, from, to)
+        const metrics = active.map((m) => {
+          const target = goals[key][m.key] as number
+          const current = m.pick(summary)
+          return {
+            key: m.key,
+            label: m.label,
+            percent: Math.min(Math.floor((current / target) * 100), 999),
+            achieved: current >= target,
+          }
+        })
+        return {
+          from,
+          label: historyLabel(key, from, to, i === 0),
+          achieved: metrics.every((m) => m.achieved),
+          metrics,
+        }
+      })
+    }
+    return result
+  }, [records, goals])
+
   const handleChange = (period: GoalPeriod, key: keyof PeriodGoal, value: string) => {
     setDraft((prev) => ({ ...prev, [period]: { ...prev[period], [key]: value } }))
     setSavedPeriod(null)
@@ -138,6 +211,40 @@ export default function GoalsTab({ goals, records, onSave }: Props) {
                   target={goals[key][m.key] as number}
                 />
               ))
+            )}
+
+            {histories[key].length > 0 && (
+              <>
+                <h3>
+                  達成度の履歴
+                  <span className="goal-range">
+                    直近{HISTORY[key].count}
+                    {HISTORY[key].unit}で {histories[key].filter((r) => r.achieved).length}
+                    {HISTORY[key].unit}達成
+                  </span>
+                </h3>
+                <ul className="goal-history">
+                  {histories[key].map((row) => (
+                    <li key={row.from}>
+                      <span
+                        className={
+                          row.achieved ? 'goal-history-badge achieved' : 'goal-history-badge'
+                        }
+                      >
+                        {row.achieved ? '達成' : '未達'}
+                      </span>
+                      <span className="goal-history-label">{row.label}</span>
+                      <span className="goal-history-metrics">
+                        {row.metrics.map((m) => (
+                          <span key={m.key} className={m.achieved ? 'achieved' : undefined}>
+                            {m.label} {m.percent}%
+                          </span>
+                        ))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
 
             <h3>目標を設定(空欄は未設定)</h3>
