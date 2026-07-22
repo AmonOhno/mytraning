@@ -450,6 +450,63 @@ small {
   background: var(--success);
 }
 
+.goal-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.goal-history li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.goal-history li:first-child {
+  border-top: none;
+}
+
+.goal-history-badge {
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.goal-history-badge.achieved {
+  color: #fff;
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.goal-history-label {
+  flex: none;
+  min-width: 6em;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-history-metrics {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-history-metrics .achieved {
+  color: var(--success);
+  font-weight: 600;
+}
+
 .goal-inputs {
   display: flex;
   gap: 8px;

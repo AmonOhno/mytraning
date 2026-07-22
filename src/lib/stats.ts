@@ -69,6 +69,23 @@ export function goalPeriodRange(
   return { from: toDateString(start), to: toDateString(end) }
 }
 
+/** 直近 count 期間分の目標対象期間(現在の期間を先頭に新しい順) */
+export function recentGoalPeriodRanges(
+  period: GoalPeriod,
+  count: number,
+  today = new Date(),
+): { from: string; to: string }[] {
+  const ranges: { from: string; to: string }[] = []
+  for (let i = 0; i < count; i++) {
+    const base = new Date(today)
+    if (period === 'daily') base.setDate(base.getDate() - i)
+    if (period === 'weekly') base.setDate(base.getDate() - i * 7)
+    if (period === 'monthly') base.setMonth(base.getMonth() - i, 1)
+    ranges.push(goalPeriodRange(period, base))
+  }
+  return ranges
+}
+
 /** 秒数を H:MM:SS 形式にフォーマット */
 export function formatHMS(totalSec: number): string {
   const h = Math.floor(totalSec / 3600)
