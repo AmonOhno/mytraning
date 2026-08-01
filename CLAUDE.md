@@ -50,6 +50,8 @@ npm run lint    # リント
 Web 側の修正を iOS に反映する場合:
 
 ```bash
-npm run build
-npx cap sync ios
+npm run ios:sync   # npm run build + cap sync ios
 ```
+
+`npm run build` だけでは `ios/App/App/public` が更新されず、iOS アプリには古い web 資産が残る。
+Xcode でビルドする前に必ず `npm run ios:sync` を実行すること。

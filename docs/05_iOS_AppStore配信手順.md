@@ -15,7 +15,7 @@ Capacitor により Web 版と同一コードベースから iOS アプリを生
 ```bash
 npm run build
 npx cap add ios     # ios/ ディレクトリが生成される(本リポジトリでは生成済みの場合スキップ)
-npx cap sync ios
+npm run ios:sync
 ```
 
 ## 2. アプリ情報の設定
@@ -32,7 +32,7 @@ npx cap sync ios
 ## 4. ビルドと提出
 
 ```bash
-npx cap open ios    # Xcode が開く
+npm run ios:open    # ビルド + sync してから Xcode が開く
 ```
 
 Xcode 上で:
@@ -53,6 +53,27 @@ Xcode 上で:
 ## 6. 更新フロー
 
 ```bash
-npm run build && npx cap sync ios && npx cap open ios
+npm run ios:open
 # Xcode でビルド番号を上げて Archive → Upload
 ```
+
+## 7. iOS 版にだけ最新の画面・機能が反映されないとき
+
+Web 版に存在する画面(例: 目標タブ)が iOS 版に出てこない場合、
+ほぼ確実に **iOS アプリへ同梱された web 資産が古い**ことが原因である。
+`ios/App/App/public` は `.gitignore` 対象で Xcode ビルド時に自動生成されないため、
+`cap sync` を実行しない限り前回同梱された `dist/` がそのまま残る。
+
+確認と復旧手順:
+
+1. 端末上でアプリの 連携タブ →「ビルド情報」でビルド日時を確認する。
+   日時が古ければ web 資産が更新されていない。
+2. `npm run ios:sync` を実行する(`npm run build` 単体では iOS に反映されない)。
+3. `ios/App/App/public/index.html` と `public/assets/` のタイムスタンプが
+   更新されていることを確認する。
+4. Xcode で Product → Clean Build Folder(⇧⌘K)してから再ビルドする。
+   `public` はフォルダ参照のため、増分ビルドで再コピーされないことがある。
+5. 実機・シミュレータからアプリを一度削除してから入れ直す。
+
+なお対応 OS は iOS 15.4 以上(`vite.config.ts` の `build.target` と一致)。
+それ未満の端末では JS が読み込めず、タブどころか画面全体が表示されない。

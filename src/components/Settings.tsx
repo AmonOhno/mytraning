@@ -2,6 +2,14 @@ import { useState } from 'react'
 import type { AppSettings, TrainingRecord } from '../types'
 import { downloadExport, sendToMyos } from '../lib/myos'
 
+/** ビルド日時を端末のローカル時刻で表示する */
+function formatBuildTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 interface Props {
   settings: AppSettings
   records: TrainingRecord[]
@@ -145,6 +153,16 @@ export default function Settings({
           <p>
             記録はすべてこの端末内(ローカルストレージ)に保存されます。
             機種変更やブラウザ変更の前に JSON エクスポートでバックアップしてください。
+          </p>
+        </section>
+
+        <section>
+          <h3>ビルド情報</h3>
+          <p className="muted">
+            ビルド日時: {formatBuildTime(__BUILD_TIME__)}
+            <br />
+            表示中の機能が最新でない場合は、この日時が古くなっていないか確認してください。
+            iOS アプリでは `npm run ios:sync` を実行してから Xcode でビルドし直す必要があります。
           </p>
         </section>
       </div>

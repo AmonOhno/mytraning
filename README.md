@@ -29,15 +29,20 @@ npm install
 npm run dev      # 開発サーバ (http://localhost:5173)
 npm run build    # 型チェック + 本番ビルド (dist/)
 npm run lint     # リント
+npm run ios:sync # ビルド + iOS プロジェクトへ反映 (ios/App/App/public)
 ```
 
 ## iOS(App Store 配信)
 
 ```bash
-npm run build
-npx cap sync ios   # dist/ を ios/ プロジェクトへ反映
-npx cap open ios   # Xcode で開き、署名して Archive → App Store Connect へ
+npm run ios:sync   # ビルド + dist/ を ios/ プロジェクトへ反映
+npm run ios:open   # 上記 + Xcode を開く(署名して Archive → App Store Connect へ)
 ```
+
+> **重要**: Xcode でビルドする前に必ず `npm run ios:sync` を実行すること。
+> これを飛ばすと iOS アプリには前回同梱された古い web 資産が残り、
+> 追加したはずの画面や機能が iOS 版にだけ現れない。
+> 端末側では 連携タブの「ビルド情報」でビルド日時を確認できる。
 
 詳細は [docs/05_iOS_AppStore配信手順.md](docs/05_iOS_AppStore配信手順.md) を参照。
 App Store 配信には Apple Developer Program(年 $99)が必要です(アプリ自体の開発・運用は無料)。
