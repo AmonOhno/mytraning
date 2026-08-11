@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { TrainingRecord } from '../types'
 import {
+  dailyEventLoadSeries,
   dailyMetricSeries,
   exerciseMaxSeries,
   knownExerciseNames,
@@ -218,6 +219,7 @@ export default function Stats({ records }: { records: TrainingRecord[] }) {
   )
   const sleepSeries = useMemo(() => dailyMetricSeries(records, (r) => r.sleepHours), [records])
   const volumes = useMemo(() => weeklyVolumes(records), [records])
+  const eventLoads = useMemo(() => dailyEventLoadSeries(records), [records])
   const exerciseSeries = useMemo(
     () => (selected ? exerciseMaxSeries(records, selected) : null),
     [records, selected],
@@ -251,6 +253,14 @@ export default function Stats({ records }: { records: TrainingRecord[] }) {
           </>
         )}
       </div>
+
+      {eventLoads.length > 0 && (
+        <div className="card">
+          <h2>イベント負荷の推移 (AU)</h2>
+          <LineChart points={eventLoads} unit="AU" />
+          <small>実働分 × RPE(主観的運動強度)で推定した1日あたりの負荷</small>
+        </div>
+      )}
 
       <div className="card">
         <h2>体重の推移 (kg)</h2>

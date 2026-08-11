@@ -1,4 +1,4 @@
-import type { TrainingRecord } from '../types'
+import type { EventSession, TrainingRecord } from '../types'
 
 export function recordVolume(record: TrainingRecord): number {
   return record.strength.reduce(
@@ -7,10 +7,42 @@ export function recordVolume(record: TrainingRecord): number {
   )
 }
 
+/** イベントの内訳(何分 × 何本)の合計時間(秒) */
+export function boutsSec(bouts: EventSession['bouts']): number {
+  return bouts.reduce((sum, b) => sum + b.minutes * 60 * b.count, 0)
+}
+
+/** イベントの実働時間(秒)。内訳があればその合計、なければ拘束時間を実働とみなす */
+export function eventActiveSec(event: EventSession): number {
+  const active = boutsSec(event.bouts)
+  return active > 0 ? active : event.durationSec
+}
+
+/**
+ * イベントの推定負荷 (AU)。
+ * セッション RPE 法(実働分 × 主観的強度 RPE)。RPE 未入力の場合は推定できないため 0。
+ */
+export function eventLoad(event: EventSession): number {
+  if (event.rpe == null) return 0
+  return Math.round((eventActiveSec(event) / 60) * event.rpe)
+}
+
+export function recordEventLoad(record: TrainingRecord): number {
+  return record.events.reduce((sum, e) => sum + eventLoad(e), 0)
+}
+
+export function recordEventActiveSec(record: TrainingRecord): number {
+  return record.events.reduce((sum, e) => sum + eventActiveSec(e), 0)
+}
+
 export interface WeeklySummary {
   trainingDays: number
   totalVolumeKg: number
   cardioMinutes: number
+  /** イベントの実働時間(分) */
+  eventMinutes: number
+  /** イベントの推定負荷 (AU) */
+  eventLoad: number
 }
 
 function toDateString(d: Date): string {
@@ -24,7 +56,9 @@ function toDateString(d: Date): string {
 export function rangeSummary(records: TrainingRecord[], from: string, to: string): WeeklySummary {
   const inRange = records.filter((r) => r.date >= from && r.date <= to)
   const trainingDays = new Set(
-    inRange.filter((r) => r.strength.length > 0 || r.cardio.length > 0).map((r) => r.date),
+    inRange
+      .filter((r) => r.strength.length > 0 || r.cardio.length > 0 || r.events.length > 0)
+      .map((r) => r.date),
   ).size
 
   return {
@@ -33,6 +67,10 @@ export function rangeSummary(records: TrainingRecord[], from: string, to: string
     cardioMinutes: Math.round(
       inRange.reduce((sum, r) => sum + r.cardio.reduce((s, c) => s + c.durationSec, 0), 0) / 60,
     ),
+    eventMinutes: Math.round(
+      inRange.reduce((sum, r) => sum + recordEventActiveSec(r), 0) / 60,
+    ),
+    eventLoad: inRange.reduce((sum, r) => sum + recordEventLoad(r), 0),
   }
 }
 
@@ -173,6 +211,29 @@ export function exerciseMaxSeries(records: TrainingRecord[], name: string): Exer
     .map(([date, value]) => ({ date, value }))
     .sort((a, b) => (a.date < b.date ? -1 : 1))
   return { unit: hasWeight ? 'kg' : '秒', points }
+}
+
+/** 日別のイベント推定負荷 (AU) の推移(日付昇順)。同一日付の複数記録は合算する */
+export function dailyEventLoadSeries(records: TrainingRecord[]): DatePoint[] {
+  const byDate = new Map<string, number>()
+  for (const r of records) {
+    const load = recordEventLoad(r)
+    if (load > 0) byDate.set(r.date, (byDate.get(r.date) ?? 0) + load)
+  }
+  return [...byDate.entries()]
+    .map(([date, value]) => ({ date, value }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+}
+
+/** 過去に入力されたイベント名(新しい記録優先・重複なし) */
+export function knownEventNames(records: TrainingRecord[]): string[] {
+  const names: string[] = []
+  for (const r of records) {
+    for (const e of r.events) {
+      if (e.name && !names.includes(e.name)) names.push(e.name)
+    }
+  }
+  return names
 }
 
 /** 過去に入力された種目名(新しい記録優先・重複なし) */

@@ -1,17 +1,48 @@
 import { useEffect, useState } from 'react'
-import type { CardioSession, Fatigue, StrengthExercise, TrainingRecord } from '../types'
+import type {
+  CardioSession,
+  EventSession,
+  Fatigue,
+  StrengthExercise,
+  TrainingRecord,
+} from '../types'
 import { newId } from '../lib/storage'
+import { boutsSec, eventActiveSec, eventLoad } from '../lib/stats'
 
 interface Props {
   editing: TrainingRecord | null
   existingDates: string[]
   exerciseMaster: string[]
+  /** 過去に入力されたイベント名(入力候補) */
+  eventNames: string[]
   onSave: (record: TrainingRecord) => void
   onCancel: () => void
 }
 
 /** 種目セレクトで「新しい種目を追加」を表す特殊値 */
 const NEW_EXERCISE = '__new__'
+
+/** イベント名の初期候補(過去の入力と合わせて datalist に表示) */
+const EVENT_PRESETS = [
+  'サッカー',
+  'フットサル',
+  'バスケットボール',
+  'テニス',
+  'バドミントン',
+  '野球',
+  'バレーボール',
+  '登山',
+]
+
+/** RPE(主観的運動強度)の目安 */
+const RPE_HINTS: Record<number, string> = {
+  1: 'ごく楽',
+  3: '楽',
+  5: 'ややきつい',
+  7: 'きつい',
+  9: '非常にきつい',
+  10: '限界',
+}
 
 function todayString(): string {
   const d = new Date()
@@ -23,6 +54,15 @@ const emptyExercise = (): StrengthExercise => ({
   sets: [{ weightKg: 0, reps: 0, seconds: null }],
 })
 const emptyCardio = (): CardioSession => ({ kind: '', durationSec: 0, distanceKm: null })
+const emptyEvent = (): EventSession => ({
+  name: '',
+  startTime: null,
+  durationSec: 0,
+  bouts: [],
+  rpe: null,
+  distanceKm: null,
+  memo: '',
+})
 
 const splitHMS = (totalSec: number) => ({
   h: Math.floor(totalSec / 3600),
@@ -34,6 +74,7 @@ export default function RecordForm({
   editing,
   existingDates,
   exerciseMaster,
+  eventNames,
   onSave,
   onCancel,
 }: Props) {
@@ -42,6 +83,7 @@ export default function RecordForm({
   /** strength と同じ並びで、名前をテキスト入力中(マスタ未登録の新種目)かどうか */
   const [customName, setCustomName] = useState<boolean[]>([])
   const [cardio, setCardio] = useState<CardioSession[]>([])
+  const [events, setEvents] = useState<EventSession[]>([])
   const [bodyWeight, setBodyWeight] = useState('')
   const [fatigue, setFatigue] = useState<Fatigue | null>(null)
   const [sleepHours, setSleepHours] = useState('')
@@ -54,6 +96,7 @@ export default function RecordForm({
       setStrength(structuredClone(editing.strength))
       setCustomName(editing.strength.map(() => false))
       setCardio(structuredClone(editing.cardio))
+      setEvents(structuredClone(editing.events))
       setBodyWeight(editing.bodyWeightKg?.toString() ?? '')
       setFatigue(editing.fatigue)
       setSleepHours(editing.sleepHours?.toString() ?? '')
@@ -132,6 +175,42 @@ export default function RecordForm({
     )
   }
 
+  const nameSuggestions = [...eventNames, ...EVENT_PRESETS.filter((p) => !eventNames.includes(p))]
+
+  const updateEvent = (i: number, patch: Partial<EventSession>) => {
+    setEvents((prev) => prev.map((e, idx) => (idx === i ? { ...e, ...patch } : e)))
+  }
+
+  const updateEventTime = (i: number, part: 'h' | 'm' | 's', value: string) => {
+    setEvents((prev) =>
+      prev.map((e, idx) => {
+        if (idx !== i) return e
+        const parts = { ...splitHMS(e.durationSec), [part]: Number(value) || 0 }
+        return { ...e, durationSec: parts.h * 3600 + parts.m * 60 + parts.s }
+      }),
+    )
+  }
+
+  const updateBout = (
+    eventIdx: number,
+    boutIdx: number,
+    field: 'minutes' | 'count',
+    value: string,
+  ) => {
+    setEvents((prev) =>
+      prev.map((e, i) =>
+        i === eventIdx
+          ? {
+              ...e,
+              bouts: e.bouts.map((b, j) =>
+                j === boutIdx ? { ...b, [field]: Number(value) || 0 } : b,
+              ),
+            }
+          : e,
+      ),
+    )
+  }
+
   const handleSubmit = () => {
     if (!date) {
       setError('日付を入力してください')
@@ -147,9 +226,27 @@ export default function RecordForm({
     const cleanCardio = cardio
       .map((c) => ({ ...c, kind: c.kind.trim() }))
       .filter((c) => c.kind && c.durationSec > 0)
+    const cleanEvents = events
+      .map((e) => {
+        const bouts = e.bouts.filter((b) => b.minutes > 0 && b.count > 0)
+        return {
+          ...e,
+          name: e.name.trim(),
+          memo: e.memo.trim(),
+          bouts,
+          // 拘束時間が未入力なら内訳の合計を実施時間として採用する
+          durationSec: e.durationSec > 0 ? e.durationSec : boutsSec(bouts),
+        }
+      })
+      .filter((e) => e.name && e.durationSec > 0)
 
     const hasContent =
-      cleanStrength.length > 0 || cleanCardio.length > 0 || bodyWeight || sleepHours || memo.trim()
+      cleanStrength.length > 0 ||
+      cleanCardio.length > 0 ||
+      cleanEvents.length > 0 ||
+      bodyWeight ||
+      sleepHours ||
+      memo.trim()
     if (!hasContent) {
       setError('記録する内容を1つ以上入力してください')
       return
@@ -164,6 +261,7 @@ export default function RecordForm({
       date,
       strength: cleanStrength,
       cardio: cleanCardio,
+      events: cleanEvents,
       bodyWeightKg: bodyWeight ? Number(bodyWeight) : null,
       fatigue,
       sleepHours: sleepHours ? Number(sleepHours) : null,
@@ -380,6 +478,193 @@ export default function RecordForm({
         ))}
         <button type="button" className="ghost" onClick={() => setCardio((p) => [...p, emptyCardio()])}>
           + 有酸素追加
+        </button>
+      </section>
+
+      <section>
+        <h3>イベント参加</h3>
+        <datalist id="event-name-list">
+          {nameSuggestions.map((n) => (
+            <option key={n} value={n} />
+          ))}
+        </datalist>
+        {events.map((e, i) => {
+          const activeMin = Math.round(eventActiveSec(e) / 60)
+          const load = eventLoad(e)
+          return (
+            <div className="exercise" key={i}>
+              <div className="row">
+                <input
+                  type="text"
+                  list="event-name-list"
+                  placeholder="イベント名(例: サッカー)"
+                  aria-label="イベント名"
+                  value={e.name}
+                  onChange={(ev) => updateEvent(i, { name: ev.target.value })}
+                />
+                <button
+                  type="button"
+                  className="ghost danger"
+                  onClick={() => setEvents((prev) => prev.filter((_, idx) => idx !== i))}
+                  aria-label="イベントを削除"
+                >
+                  削除
+                </button>
+              </div>
+
+              <div className="row set-row">
+                <span className="set-label">開始時刻</span>
+                <input
+                  type="time"
+                  className="wide"
+                  aria-label="開始時刻"
+                  value={e.startTime ?? ''}
+                  onChange={(ev) => updateEvent(i, { startTime: ev.target.value || null })}
+                />
+              </div>
+
+              <div className="row set-row time-row">
+                <span className="set-label">実施時間</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  placeholder="時"
+                  aria-label="実施時間(時)"
+                  value={splitHMS(e.durationSec).h || ''}
+                  onChange={(ev) => updateEventTime(i, 'h', ev.target.value)}
+                />
+                <span>:</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max="59"
+                  placeholder="分"
+                  aria-label="実施時間(分)"
+                  value={splitHMS(e.durationSec).m || ''}
+                  onChange={(ev) => updateEventTime(i, 'm', ev.target.value)}
+                />
+                <span>:</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max="59"
+                  placeholder="秒"
+                  aria-label="実施時間(秒)"
+                  value={splitHMS(e.durationSec).s || ''}
+                  onChange={(ev) => updateEventTime(i, 's', ev.target.value)}
+                />
+              </div>
+
+              {e.bouts.length > 0 && (
+                <div className="set-row">
+                  <small>出場時間の内訳(1本あたりの時間 × 本数)</small>
+                </div>
+              )}
+              {e.bouts.map((b, j) => (
+                <div className="row set-row" key={j}>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    placeholder="分"
+                    aria-label="1本あたりの時間(分)"
+                    value={b.minutes || ''}
+                    onChange={(ev) => updateBout(i, j, 'minutes', ev.target.value)}
+                  />
+                  <span>分 ×</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    placeholder="本"
+                    aria-label="本数"
+                    value={b.count || ''}
+                    onChange={(ev) => updateBout(i, j, 'count', ev.target.value)}
+                  />
+                  <span>本</span>
+                  <button
+                    type="button"
+                    className="ghost danger"
+                    onClick={() =>
+                      updateEvent(i, { bouts: e.bouts.filter((_, idx) => idx !== j) })
+                    }
+                    aria-label="内訳を削除"
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => updateEvent(i, { bouts: [...e.bouts, { minutes: 0, count: 1 }] })}
+              >
+                {e.bouts.length > 0 ? '+ 内訳を追加' : '+ 出場時間の内訳(何分×何本)'}
+              </button>
+
+              <label>
+                きつさ (RPE)
+                <div className="rpe-row" role="radiogroup" aria-label="主観的運動強度 RPE">
+                  {Array.from({ length: 10 }, (_, idx) => idx + 1).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      className={e.rpe === v ? 'rpe selected' : 'rpe'}
+                      aria-pressed={e.rpe === v}
+                      onClick={() => updateEvent(i, { rpe: e.rpe === v ? null : v })}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <small>
+                  1 = ごく楽 / 5 = ややきつい / 10 = 限界
+                  {e.rpe != null && RPE_HINTS[e.rpe] ? `(選択中: ${RPE_HINTS[e.rpe]})` : ''}
+                </small>
+              </label>
+
+              <div className="row set-row">
+                <span className="set-label">距離</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.1"
+                  placeholder="km(任意)"
+                  aria-label="距離 (km)"
+                  value={e.distanceKm ?? ''}
+                  onChange={(ev) =>
+                    updateEvent(i, {
+                      distanceKm: ev.target.value ? Number(ev.target.value) : null,
+                    })
+                  }
+                />
+                <span>km</span>
+              </div>
+
+              <label>
+                メモ(ポジション・対戦相手など)
+                <input
+                  type="text"
+                  value={e.memo}
+                  onChange={(ev) => updateEvent(i, { memo: ev.target.value })}
+                />
+              </label>
+
+              {activeMin > 0 && (
+                <small>
+                  実働 {activeMin}分
+                  {load > 0 ? ` / 推定負荷 ${load.toLocaleString()}AU(実働分 × RPE)` : ''}
+                </small>
+              )}
+            </div>
+          )
+        })}
+        <button type="button" className="ghost" onClick={() => setEvents((p) => [...p, emptyEvent()])}>
+          + イベント追加
         </button>
       </section>
 

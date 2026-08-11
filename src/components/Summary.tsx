@@ -19,7 +19,12 @@ export default function Summary({ records }: { records: TrainingRecord[] }) {
           <span className="stat-value">{s.cardioMinutes}</span>
           <span className="stat-label">有酸素 (分)</span>
         </div>
+        <div className="stat">
+          <span className="stat-value">{s.eventMinutes}</span>
+          <span className="stat-label">イベント (分)</span>
+        </div>
       </div>
+      {s.eventLoad > 0 && <small>イベント推定負荷 {s.eventLoad.toLocaleString()}AU(実働分 × RPE)</small>}
     </div>
   )
 }

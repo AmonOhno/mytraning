@@ -58,25 +58,39 @@ function cardioSeconds(c: TrainingRecord['cardio'][number]): number {
   return c.durationSec ?? Math.round((legacyMinutes ?? 0) * 60)
 }
 
-/** 筋トレまたは有酸素の実績がある記録を1セッションと数える */
-function isSession(r: TrainingRecord): boolean {
-  return r.strength.length > 0 || r.cardio.length > 0
+/** 旧形式(events を持たない記録)にも耐えるようイベント配列を取得 */
+function eventsOf(r: TrainingRecord): TrainingRecord['events'] {
+  return r.events ?? []
 }
 
-/** 有酸素の合計時間 + 秒数ベースのセット(プランク等)を分に換算 */
+/** イベントの実働時間(秒)。内訳(何分×何本)があればその合計、なければ拘束時間 */
+function eventSeconds(e: TrainingRecord['events'][number]): number {
+  const bouts = (e.bouts ?? []).reduce((sum, b) => sum + b.minutes * 60 * b.count, 0)
+  return bouts > 0 ? bouts : e.durationSec
+}
+
+/** 筋トレ・有酸素・イベント参加のいずれかの実績がある記録を1セッションと数える */
+function isSession(r: TrainingRecord): boolean {
+  return r.strength.length > 0 || r.cardio.length > 0 || eventsOf(r).length > 0
+}
+
+/** 有酸素・イベントの合計時間 + 秒数ベースのセット(プランク等)を分に換算 */
 function sessionMinutes(r: TrainingRecord): number {
   const cardio = r.cardio.reduce((sum, c) => sum + cardioSeconds(c), 0)
   const strength = r.strength.reduce(
     (sum, ex) => sum + ex.sets.reduce((s, set) => s + (set.seconds ?? 0), 0),
     0,
   )
-  return Math.round((cardio + strength) / 60)
+  const events = eventsOf(r).reduce((sum, e) => sum + eventSeconds(e), 0)
+  return Math.round((cardio + strength + events) / 60)
 }
 
 function sessionTitle(r: TrainingRecord): string {
-  const names = [...r.strength.map((ex) => ex.name), ...r.cardio.map((c) => c.kind)].filter(
-    (name) => name.trim() !== '',
-  )
+  const names = [
+    ...r.strength.map((ex) => ex.name),
+    ...r.cardio.map((c) => c.kind),
+    ...eventsOf(r).map((e) => e.name),
+  ].filter((name) => name.trim() !== '')
   return names.length > 0 ? [...new Set(names)].join('・') : 'トレーニング'
 }
 

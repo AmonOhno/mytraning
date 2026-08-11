@@ -187,6 +187,45 @@ button.mode.selected {
   flex: none;
 }
 
+.set-row input.wide {
+  width: 9em;
+}
+
+/* 「実施時間 [時]:[分]:[秒]」を狭い画面でも1行に収める */
+.time-row .set-label {
+  min-width: 4.5em;
+}
+
+.time-row input {
+  width: 4em;
+}
+
+.set-row .ghost {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.rpe-row {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  margin-top: 4px;
+}
+
+button.rpe {
+  padding: 8px 0;
+  font-size: 0.8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+button.rpe.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
 .set-label {
   min-width: 5.5em;
   font-size: 0.8rem;

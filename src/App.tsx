@@ -13,6 +13,7 @@ import {
   saveRecord,
   saveSettings,
 } from './lib/storage'
+import { knownEventNames } from './lib/stats'
 import RecordForm from './components/RecordForm'
 import RecordList from './components/RecordList'
 import Summary from './components/Summary'
@@ -87,6 +88,7 @@ export default function App() {
             editing={editing}
             existingDates={records.map((r) => r.date)}
             exerciseMaster={exercises}
+            eventNames={knownEventNames(records)}
             onSave={handleSave}
             onCancel={() => {
               setEditing(null)
