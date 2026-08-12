@@ -6,10 +6,18 @@ const SETTINGS_KEY = 'mytraining.settings'
 const GOALS_KEY = 'mytraining.goals'
 const EXERCISES_KEY = 'mytraining.exercises'
 
-/** 旧形式(seconds なしのセット / minutes ベースの有酸素)を現行形式へ変換 */
+/** 旧形式(seconds なしのセット / minutes ベースの有酸素 / events なし)を現行形式へ変換 */
 function migrateRecord(r: TrainingRecord): TrainingRecord {
   return {
     ...r,
+    events: (r.events ?? []).map((e) => ({
+      ...e,
+      startTime: e.startTime ?? null,
+      bouts: e.bouts ?? [],
+      rpe: e.rpe ?? null,
+      distanceKm: e.distanceKm ?? null,
+      memo: e.memo ?? '',
+    })),
     strength: (r.strength ?? []).map((ex) => ({
       ...ex,
       sets: ex.sets.map((s) => ({ ...s, seconds: s.seconds ?? null })),
@@ -56,7 +64,7 @@ export function saveRecord(record: TrainingRecord): TrainingRecord[] {
 /**
  * 同日付の複数レコードを1つに統合する。
  * - 筋トレ: 同名種目はセットを連結、それ以外は追加
- * - 有酸素: 連結
+ * - 有酸素・イベント: 連結
  * - 体重・疲労度・睡眠: 後から登録されたレコードの値を優先(非 null のみ)
  * - メモ: 改行で連結
  */
@@ -72,6 +80,7 @@ export function mergeRecordsForDate(date: string): TrainingRecord[] {
     date,
     strength: [],
     cardio: [],
+    events: [],
     bodyWeightKg: null,
     fatigue: null,
     sleepHours: null,
@@ -89,6 +98,7 @@ export function mergeRecordsForDate(date: string): TrainingRecord[] {
       }
     }
     merged.cardio.push(...r.cardio)
+    merged.events.push(...r.events)
     if (r.bodyWeightKg != null) merged.bodyWeightKg = r.bodyWeightKg
     if (r.fatigue != null) merged.fatigue = r.fatigue
     if (r.sleepHours != null) merged.sleepHours = r.sleepHours

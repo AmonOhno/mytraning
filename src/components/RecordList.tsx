@@ -1,5 +1,11 @@
 import type { TrainingRecord } from '../types'
-import { formatHMS, recordVolume } from '../lib/stats'
+import {
+  boutsSec,
+  eventActiveSec,
+  formatHMS,
+  recordEventLoad,
+  recordVolume,
+} from '../lib/stats'
 
 interface Props {
   records: TrainingRecord[]
@@ -80,8 +86,34 @@ export default function RecordList({ records, onEdit, onDelete, onMergeDate }: P
             </ul>
           )}
 
+          {r.events.length > 0 && (
+            <ul>
+              {r.events.map((e, i) => {
+                const detail = [
+                  e.startTime ? `${e.startTime}〜` : '',
+                  formatHMS(e.durationSec),
+                  e.bouts.length > 0
+                    ? `(${e.bouts.map((b) => `${b.minutes}分×${b.count}本`).join(' + ')} = 実働${Math.round(boutsSec(e.bouts) / 60)}分)`
+                    : '',
+                  e.rpe != null ? `RPE ${e.rpe}` : '',
+                  e.distanceKm != null ? `${e.distanceKm}km` : '',
+                ].filter(Boolean)
+                return (
+                  <li key={i}>
+                    {e.name}: {detail.join(' / ')}
+                    {e.memo && <span className="muted"> — {e.memo}</span>}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
           <div className="record-meta">
             {recordVolume(r) > 0 && <span>ボリューム {recordVolume(r).toLocaleString()}kg</span>}
+            {r.events.length > 0 && (
+              <span>イベント実働 {Math.round(r.events.reduce((s, e) => s + eventActiveSec(e), 0) / 60)}分</span>
+            )}
+            {recordEventLoad(r) > 0 && <span>イベント負荷 {recordEventLoad(r).toLocaleString()}AU</span>}
             {r.bodyWeightKg != null && <span>体重 {r.bodyWeightKg}kg</span>}
             {r.sleepHours != null && <span>睡眠 {r.sleepHours}h</span>}
             {r.fatigue != null && <span>疲労度 {r.fatigue} ({FATIGUE_LABELS[r.fatigue]})</span>}
