@@ -2,10 +2,13 @@ import { useState } from 'react'
 import type { AppSettings, Goals, TrainingRecord } from './types'
 import {
   addExercises,
+  addLocations,
   deleteExercise,
+  deleteLocation,
   deleteRecord,
   loadExercises,
   loadGoals,
+  loadLocations,
   loadRecords,
   loadSettings,
   mergeRecordsForDate,
@@ -13,7 +16,7 @@ import {
   saveRecord,
   saveSettings,
 } from './lib/storage'
-import { knownEventNames, knownLocations } from './lib/stats'
+import { knownEventNames } from './lib/stats'
 import RecordForm from './components/RecordForm'
 import RecordList from './components/RecordList'
 import Summary from './components/Summary'
@@ -28,6 +31,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [goals, setGoals] = useState<Goals>(() => loadGoals())
   const [exercises, setExercises] = useState<string[]>(() => loadExercises())
+  const [locations, setLocations] = useState<string[]>(() => loadLocations())
   const [tab, setTab] = useState<Tab>('input')
   const [editing, setEditing] = useState<TrainingRecord | null>(null)
 
@@ -35,6 +39,14 @@ export default function App() {
     setRecords(saveRecord(record))
     // 新規入力された種目名をマスタへ自動登録する
     setExercises(addExercises(record.strength.map((ex) => ex.name)))
+    // 新規入力された場所／施設をマスタへ自動登録する
+    setLocations(
+      addLocations([
+        ...record.strength.map((ex) => ex.location),
+        ...record.cardio.map((c) => c.location),
+        ...record.events.map((e) => e.location),
+      ]),
+    )
     setEditing(null)
     setTab('history')
   }
@@ -45,6 +57,14 @@ export default function App() {
 
   const handleDeleteExercise = (name: string) => {
     setExercises(deleteExercise(name))
+  }
+
+  const handleAddLocation = (name: string) => {
+    setLocations(addLocations([name]))
+  }
+
+  const handleDeleteLocation = (name: string) => {
+    setLocations(deleteLocation(name))
   }
 
   const handleDelete = (id: string) => {
@@ -89,7 +109,7 @@ export default function App() {
             existingDates={records.map((r) => r.date)}
             exerciseMaster={exercises}
             eventNames={knownEventNames(records)}
-            locations={knownLocations(records)}
+            locations={locations}
             onSave={handleSave}
             onCancel={() => {
               setEditing(null)
@@ -115,9 +135,12 @@ export default function App() {
             settings={settings}
             records={records}
             exercises={exercises}
+            locations={locations}
             onSaveSettings={handleSaveSettings}
             onAddExercise={handleAddExercise}
             onDeleteExercise={handleDeleteExercise}
+            onAddLocation={handleAddLocation}
+            onDeleteLocation={handleDeleteLocation}
           />
         )}
       </main>
