@@ -24,6 +24,81 @@ interface Props {
 /** 種目セレクトで「新しい種目を追加」を表す特殊値 */
 const NEW_EXERCISE = '__new__'
 
+/** 場所セレクトで「新しい場所を追加」を表す特殊値 */
+const NEW_LOCATION = '__new_location__'
+
+/**
+ * 場所／施設をマスタから選ぶ入力欄。種目マスタと同じ選択式で、
+ * 一覧にない場所は「＋ 新しい場所を追加」からテキスト入力できる。
+ * 入力した場所は保存時にマスタへ自動登録される。
+ */
+function LocationField({
+  value,
+  master,
+  onChange,
+}: {
+  value: string
+  master: string[]
+  onChange: (value: string) => void
+}) {
+  // マスタが空、または現在値が未登録なら最初からテキスト入力にする
+  const [custom, setCustom] = useState(master.length === 0 || (value !== '' && !master.includes(value)))
+
+  return (
+    <div className="row set-row">
+      <span className="set-label">場所／施設</span>
+      {custom ? (
+        <>
+          <input
+            type="text"
+            list="location-list"
+            className="wide"
+            placeholder="場所／施設名(例: エニタイム〇〇店)"
+            aria-label="場所／施設"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {master.length > 0 && (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                setCustom(false)
+                onChange('')
+              }}
+            >
+              一覧から選ぶ
+            </button>
+          )}
+        </>
+      ) : (
+        <select
+          className="wide"
+          aria-label="場所／施設"
+          value={value}
+          onChange={(e) => {
+            if (e.target.value === NEW_LOCATION) {
+              setCustom(true)
+              onChange('')
+            } else {
+              onChange(e.target.value)
+            }
+          }}
+        >
+          <option value="">場所／施設を選択(任意)</option>
+          {master.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+          {value && !master.includes(value) && <option value={value}>{value}</option>}
+          <option value={NEW_LOCATION}>＋ 新しい場所を追加</option>
+        </select>
+      )}
+    </div>
+  )
+}
+
 /** イベント名の初期候補(過去の入力と合わせて datalist に表示) */
 const EVENT_PRESETS = [
   'サッカー',
@@ -360,18 +435,11 @@ export default function RecordForm({
                 削除
               </button>
             </div>
-            <div className="row set-row">
-              <span className="set-label">場所／施設</span>
-              <input
-                type="text"
-                list="location-list"
-                className="wide"
-                placeholder="例: 〇〇ジム、自宅(器具・環境の違いを記録)"
-                aria-label="場所／施設"
-                value={ex.location}
-                onChange={(e) => updateExercise(i, { location: e.target.value })}
-              />
-            </div>
+            <LocationField
+              value={ex.location}
+              master={locations}
+              onChange={(v) => updateExercise(i, { location: v })}
+            />
             {ex.sets.map((s, j) => (
               <div className="row set-row" key={j}>
                 <span className="set-label">{j + 1}セット目</span>
@@ -514,18 +582,11 @@ export default function RecordForm({
               />
               <span>km</span>
             </div>
-            <div className="row set-row">
-              <span className="set-label">場所／施設</span>
-              <input
-                type="text"
-                list="location-list"
-                className="wide"
-                placeholder="例: 河川敷、ジムのトレッドミル"
-                aria-label="場所／施設"
-                value={c.location}
-                onChange={(e) => updateCardio(i, { location: e.target.value })}
-              />
-            </div>
+            <LocationField
+              value={c.location}
+              master={locations}
+              onChange={(v) => updateCardio(i, { location: v })}
+            />
           </div>
         ))}
         <button type="button" className="ghost" onClick={() => setCardio((p) => [...p, emptyCardio()])}>
@@ -575,18 +636,11 @@ export default function RecordForm({
                 />
               </div>
 
-              <div className="row set-row">
-                <span className="set-label">場所／施設</span>
-                <input
-                  type="text"
-                  list="location-list"
-                  className="wide"
-                  placeholder="例: 〇〇グラウンド、市民体育館"
-                  aria-label="場所／施設"
-                  value={e.location}
-                  onChange={(ev) => updateEvent(i, { location: ev.target.value })}
-                />
-              </div>
+              <LocationField
+                value={e.location}
+                master={locations}
+                onChange={(v) => updateEvent(i, { location: v })}
+              />
 
               <div className="row set-row time-row">
                 <span className="set-label">実施時間</span>
