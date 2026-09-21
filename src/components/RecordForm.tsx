@@ -15,6 +15,8 @@ interface Props {
   exerciseMaster: string[]
   /** 過去に入力されたイベント名(入力候補) */
   eventNames: string[]
+  /** 過去に入力された場所／施設(入力候補) */
+  locations: string[]
   onSave: (record: TrainingRecord) => void
   onCancel: () => void
 }
@@ -32,6 +34,17 @@ const EVENT_PRESETS = [
   '野球',
   'バレーボール',
   '登山',
+]
+
+/** 場所／施設の初期候補(過去の入力と合わせて datalist に表示) */
+const LOCATION_PRESETS = [
+  '自宅',
+  'ジム',
+  '公園',
+  'グラウンド',
+  '体育館',
+  '河川敷',
+  'スタジオ',
 ]
 
 /** RPE(主観的運動強度)の目安 */
@@ -52,8 +65,9 @@ function todayString(): string {
 const emptyExercise = (): StrengthExercise => ({
   name: '',
   sets: [{ weightKg: 0, reps: 0, seconds: null }],
+  location: '',
 })
-const emptyCardio = (): CardioSession => ({ kind: '', durationSec: 0, distanceKm: null })
+const emptyCardio = (): CardioSession => ({ kind: '', durationSec: 0, distanceKm: null, location: '' })
 const emptyEvent = (): EventSession => ({
   name: '',
   startTime: null,
@@ -61,6 +75,7 @@ const emptyEvent = (): EventSession => ({
   bouts: [],
   rpe: null,
   distanceKm: null,
+  location: '',
   memo: '',
 })
 
@@ -75,6 +90,7 @@ export default function RecordForm({
   existingDates,
   exerciseMaster,
   eventNames,
+  locations,
   onSave,
   onCancel,
 }: Props) {
@@ -176,6 +192,10 @@ export default function RecordForm({
   }
 
   const nameSuggestions = [...eventNames, ...EVENT_PRESETS.filter((p) => !eventNames.includes(p))]
+  const locationSuggestions = [
+    ...locations,
+    ...LOCATION_PRESETS.filter((p) => !locations.includes(p)),
+  ]
 
   const updateEvent = (i: number, patch: Partial<EventSession>) => {
     setEvents((prev) => prev.map((e, idx) => (idx === i ? { ...e, ...patch } : e)))
@@ -220,11 +240,12 @@ export default function RecordForm({
       .map((ex) => ({
         ...ex,
         name: ex.name.trim(),
+        location: ex.location.trim(),
         sets: ex.sets.filter((s) => (s.seconds != null ? s.seconds > 0 : s.reps > 0)),
       }))
       .filter((ex) => ex.name && ex.sets.length > 0)
     const cleanCardio = cardio
-      .map((c) => ({ ...c, kind: c.kind.trim() }))
+      .map((c) => ({ ...c, kind: c.kind.trim(), location: c.location.trim() }))
       .filter((c) => c.kind && c.durationSec > 0)
     const cleanEvents = events
       .map((e) => {
@@ -232,6 +253,7 @@ export default function RecordForm({
         return {
           ...e,
           name: e.name.trim(),
+          location: e.location.trim(),
           memo: e.memo.trim(),
           bouts,
           // 拘束時間が未入力なら内訳の合計を実施時間として採用する
@@ -279,6 +301,12 @@ export default function RecordForm({
         日付
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </label>
+
+      <datalist id="location-list">
+        {locationSuggestions.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
 
       <section>
         <h3>筋トレ</h3>
@@ -331,6 +359,18 @@ export default function RecordForm({
               >
                 削除
               </button>
+            </div>
+            <div className="row set-row">
+              <span className="set-label">場所／施設</span>
+              <input
+                type="text"
+                list="location-list"
+                className="wide"
+                placeholder="例: 〇〇ジム、自宅(器具・環境の違いを記録)"
+                aria-label="場所／施設"
+                value={ex.location}
+                onChange={(e) => updateExercise(i, { location: e.target.value })}
+              />
             </div>
             {ex.sets.map((s, j) => (
               <div className="row set-row" key={j}>
@@ -474,6 +514,18 @@ export default function RecordForm({
               />
               <span>km</span>
             </div>
+            <div className="row set-row">
+              <span className="set-label">場所／施設</span>
+              <input
+                type="text"
+                list="location-list"
+                className="wide"
+                placeholder="例: 河川敷、ジムのトレッドミル"
+                aria-label="場所／施設"
+                value={c.location}
+                onChange={(e) => updateCardio(i, { location: e.target.value })}
+              />
+            </div>
           </div>
         ))}
         <button type="button" className="ghost" onClick={() => setCardio((p) => [...p, emptyCardio()])}>
@@ -520,6 +572,19 @@ export default function RecordForm({
                   aria-label="開始時刻"
                   value={e.startTime ?? ''}
                   onChange={(ev) => updateEvent(i, { startTime: ev.target.value || null })}
+                />
+              </div>
+
+              <div className="row set-row">
+                <span className="set-label">場所／施設</span>
+                <input
+                  type="text"
+                  list="location-list"
+                  className="wide"
+                  placeholder="例: 〇〇グラウンド、市民体育館"
+                  aria-label="場所／施設"
+                  value={e.location}
+                  onChange={(ev) => updateEvent(i, { location: ev.target.value })}
                 />
               </div>
 

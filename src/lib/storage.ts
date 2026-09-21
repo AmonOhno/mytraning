@@ -16,10 +16,12 @@ function migrateRecord(r: TrainingRecord): TrainingRecord {
       bouts: e.bouts ?? [],
       rpe: e.rpe ?? null,
       distanceKm: e.distanceKm ?? null,
+      location: e.location ?? '',
       memo: e.memo ?? '',
     })),
     strength: (r.strength ?? []).map((ex) => ({
       ...ex,
+      location: ex.location ?? '',
       sets: ex.sets.map((s) => ({ ...s, seconds: s.seconds ?? null })),
     })),
     cardio: (r.cardio ?? []).map((c) => {
@@ -27,6 +29,7 @@ function migrateRecord(r: TrainingRecord): TrainingRecord {
       const { minutes: _drop, ...rest } = c as CardioSession & { minutes?: number }
       return {
         ...rest,
+        location: c.location ?? '',
         durationSec: c.durationSec ?? Math.round((legacyMinutes ?? 0) * 60),
       }
     }),
@@ -94,7 +97,7 @@ export function mergeRecordsForDate(date: string): TrainingRecord[] {
       if (existing) {
         existing.sets.push(...ex.sets)
       } else {
-        merged.strength.push({ name: ex.name, sets: [...ex.sets] })
+        merged.strength.push({ name: ex.name, sets: [...ex.sets], location: ex.location })
       }
     }
     merged.cardio.push(...r.cardio)
