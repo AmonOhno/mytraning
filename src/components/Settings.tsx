@@ -6,24 +6,31 @@ interface Props {
   settings: AppSettings
   records: TrainingRecord[]
   exercises: string[]
+  locations: string[]
   onSaveSettings: (settings: AppSettings) => void
   onAddExercise: (name: string) => void
   onDeleteExercise: (name: string) => void
+  onAddLocation: (name: string) => void
+  onDeleteLocation: (name: string) => void
 }
 
 export default function Settings({
   settings,
   records,
   exercises,
+  locations,
   onSaveSettings,
   onAddExercise,
   onDeleteExercise,
+  onAddLocation,
+  onDeleteLocation,
 }: Props) {
   const [url, setUrl] = useState(settings.myosWebhookUrl)
   const [token, setToken] = useState(settings.myosApiToken)
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null)
   const [sending, setSending] = useState(false)
   const [newExercise, setNewExercise] = useState('')
+  const [newLocation, setNewLocation] = useState('')
 
   const handleAddExercise = () => {
     const trimmed = newExercise.trim()
@@ -35,6 +42,18 @@ export default function Settings({
   const handleDeleteExercise = (name: string) => {
     if (!confirm(`「${name}」をマスタから削除しますか?(過去の記録は変更されません)`)) return
     onDeleteExercise(name)
+  }
+
+  const handleAddLocation = () => {
+    const trimmed = newLocation.trim()
+    if (!trimmed) return
+    onAddLocation(trimmed)
+    setNewLocation('')
+  }
+
+  const handleDeleteLocation = (name: string) => {
+    if (!confirm(`「${name}」をマスタから削除しますか?(過去の記録は変更されません)`)) return
+    onDeleteLocation(name)
   }
 
   const handleSend = async () => {
@@ -82,6 +101,43 @@ export default function Settings({
             onChange={(e) => setNewExercise(e.target.value)}
           />
           <button type="button" className="ghost" onClick={handleAddExercise}>
+            追加
+          </button>
+        </div>
+      </div>
+
+      <div className="card form">
+        <h2>場所／施設マスタ</h2>
+        <p>
+          入力画面の場所／施設の候補に表示される一覧です。よく使う具体的な施設名(例: 〇〇ジム△△店)を登録しておくと入力が楽になります。記録保存時に新しい場所は自動で追加されます。
+        </p>
+        {locations.length === 0 ? (
+          <p className="muted">登録された場所／施設はまだありません。</p>
+        ) : (
+          <ul className="master-list">
+            {locations.map((n) => (
+              <li key={n} className="row">
+                <span className="master-name">{n}</span>
+                <button
+                  type="button"
+                  className="ghost danger"
+                  onClick={() => handleDeleteLocation(n)}
+                  aria-label={`${n} を削除`}
+                >
+                  削除
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="row">
+          <input
+            type="text"
+            placeholder="場所／施設名(例: エニタイム〇〇店)"
+            value={newLocation}
+            onChange={(e) => setNewLocation(e.target.value)}
+          />
+          <button type="button" className="ghost" onClick={handleAddLocation}>
             追加
           </button>
         </div>

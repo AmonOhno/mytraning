@@ -8,6 +8,8 @@ export interface ExerciseSet {
 export interface StrengthExercise {
   name: string
   sets: ExerciseSet[]
+  /** 実施した場所／施設(例: 〇〇ジム、自宅)。器具・環境が変わるため種目ごとに保持。空は未入力 */
+  location: string
 }
 
 export interface CardioSession {
@@ -15,6 +17,8 @@ export interface CardioSession {
   /** 合計時間(秒)。入力 UI は H:MM:SS */
   durationSec: number
   distanceKm: number | null
+  /** 実施した場所／施設(例: 河川敷、ジムのトレッドミル)。空は未入力 */
+  location: string
 }
 
 /** イベント内の実施単位(例: 20分ハーフ × 2本) */
@@ -39,6 +43,8 @@ export interface EventSession {
   rpe: number | null
   /** 移動距離 (km)。null は未入力 */
   distanceKm: number | null
+  /** 実施した場所／施設(例: 〇〇グラウンド、市民体育館)。空は未入力 */
+  location: string
   /** ポジション・対戦相手などの補足 */
   memo: string
 }

@@ -236,6 +236,21 @@ export function knownEventNames(records: TrainingRecord[]): string[] {
   return names
 }
 
+/** 過去に入力された場所／施設名(筋トレ・有酸素・イベント横断・重複なし) */
+export function knownLocations(records: TrainingRecord[]): string[] {
+  const locations: string[] = []
+  const add = (loc: string) => {
+    const trimmed = loc.trim()
+    if (trimmed && !locations.includes(trimmed)) locations.push(trimmed)
+  }
+  for (const r of records) {
+    for (const ex of r.strength) add(ex.location)
+    for (const c of r.cardio) add(c.location)
+    for (const e of r.events) add(e.location)
+  }
+  return locations
+}
+
 /** 過去に入力された種目名(新しい記録優先・重複なし) */
 export function knownExerciseNames(records: TrainingRecord[]): string[] {
   const names: string[] = []

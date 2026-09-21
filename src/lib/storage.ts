@@ -1,10 +1,11 @@
 import type { AppSettings, CardioSession, Goals, PeriodGoal, TrainingRecord } from '../types'
-import { knownExerciseNames } from './stats'
+import { knownExerciseNames, knownLocations } from './stats'
 
 const RECORDS_KEY = 'mytraining.records'
 const SETTINGS_KEY = 'mytraining.settings'
 const GOALS_KEY = 'mytraining.goals'
 const EXERCISES_KEY = 'mytraining.exercises'
+const LOCATIONS_KEY = 'mytraining.locations'
 
 /** 旧形式(seconds なしのセット / minutes ベースの有酸素 / events なし)を現行形式へ変換 */
 function migrateRecord(r: TrainingRecord): TrainingRecord {
@@ -16,10 +17,12 @@ function migrateRecord(r: TrainingRecord): TrainingRecord {
       bouts: e.bouts ?? [],
       rpe: e.rpe ?? null,
       distanceKm: e.distanceKm ?? null,
+      location: e.location ?? '',
       memo: e.memo ?? '',
     })),
     strength: (r.strength ?? []).map((ex) => ({
       ...ex,
+      location: ex.location ?? '',
       sets: ex.sets.map((s) => ({ ...s, seconds: s.seconds ?? null })),
     })),
     cardio: (r.cardio ?? []).map((c) => {
@@ -27,6 +30,7 @@ function migrateRecord(r: TrainingRecord): TrainingRecord {
       const { minutes: _drop, ...rest } = c as CardioSession & { minutes?: number }
       return {
         ...rest,
+        location: c.location ?? '',
         durationSec: c.durationSec ?? Math.round((legacyMinutes ?? 0) * 60),
       }
     }),
@@ -94,7 +98,7 @@ export function mergeRecordsForDate(date: string): TrainingRecord[] {
       if (existing) {
         existing.sets.push(...ex.sets)
       } else {
-        merged.strength.push({ name: ex.name, sets: [...ex.sets] })
+        merged.strength.push({ name: ex.name, sets: [...ex.sets], location: ex.location })
       }
     }
     merged.cardio.push(...r.cardio)
@@ -156,6 +160,46 @@ export function deleteExercise(name: string): string[] {
   const exercises = loadExercises().filter((n) => n !== name)
   persistExercises(exercises)
   return exercises
+}
+
+function persistLocations(names: string[]): void {
+  localStorage.setItem(LOCATIONS_KEY, JSON.stringify(names))
+}
+
+/** 場所／施設マスタを読み込む。未作成なら既存記録の場所から自動生成する */
+export function loadLocations(): string[] {
+  try {
+    const raw = localStorage.getItem(LOCATIONS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((n): n is string => typeof n === 'string')
+      }
+    }
+  } catch {
+    // 壊れたデータは既存記録から再生成する
+  }
+  const seeded = knownLocations(loadRecords())
+  persistLocations(seeded)
+  return seeded
+}
+
+/** マスタに未登録の場所／施設名を追加する(重複・空文字は無視) */
+export function addLocations(names: string[]): string[] {
+  const locations = loadLocations()
+  for (const name of names) {
+    const trimmed = name.trim()
+    if (trimmed && !locations.includes(trimmed)) locations.push(trimmed)
+  }
+  persistLocations(locations)
+  return locations
+}
+
+/** マスタから場所／施設を削除する(過去の記録は変更しない) */
+export function deleteLocation(name: string): string[] {
+  const locations = loadLocations().filter((n) => n !== name)
+  persistLocations(locations)
+  return locations
 }
 
 export function loadSettings(): AppSettings {

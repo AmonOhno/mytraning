@@ -71,6 +71,7 @@ export default function RecordList({ records, onEdit, onDelete, onMergeDate }: P
                   {ex.sets
                     .map((s) => (s.seconds != null ? `${s.seconds}秒` : `${s.weightKg}kg×${s.reps}`))
                     .join(', ')}
+                  {ex.location && <span className="muted"> @{ex.location}</span>}
                 </li>
               ))}
             </ul>
@@ -81,6 +82,7 @@ export default function RecordList({ records, onEdit, onDelete, onMergeDate }: P
                 <li key={i}>
                   {c.kind}: {formatHMS(c.durationSec)}
                   {c.distanceKm != null ? ` / ${c.distanceKm}km` : ''}
+                  {c.location && <span className="muted"> @{c.location}</span>}
                 </li>
               ))}
             </ul>
@@ -101,6 +103,7 @@ export default function RecordList({ records, onEdit, onDelete, onMergeDate }: P
                 return (
                   <li key={i}>
                     {e.name}: {detail.join(' / ')}
+                    {e.location && <span className="muted"> @{e.location}</span>}
                     {e.memo && <span className="muted"> — {e.memo}</span>}
                   </li>
                 )
