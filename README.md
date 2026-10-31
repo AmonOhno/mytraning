@@ -12,6 +12,7 @@ Web(TypeScript)と iOS(Capacitor / App Store 配信用)の同一コードベー�
 | [docs/03_データモデル.md](docs/03_データモデル.md) | エンティティ定義・保存形式 |
 | [docs/04_MyOS連携仕様.md](docs/04_MyOS連携仕様.md) | 連携フォーマット・Webhook 仕様 |
 | [docs/05_iOS_AppStore配信手順.md](docs/05_iOS_AppStore配信手順.md) | Xcode でのビルド・審査提出手順 |
+| [docs/06_CI_E2E_コードレビュー.md](docs/06_CI_E2E_コードレビュー.md) | GitHub Actions(E2E・Claude Code Review)・Secrets・ブランチ保護の設定 |
 
 ## 機能
 
@@ -30,7 +31,17 @@ npm install
 npm run dev      # 開発サーバ (http://localhost:5173)
 npm run build    # 型チェック + 本番ビルド (dist/)
 npm run lint     # リント
+npm run test:e2e # E2E テスト (Playwright。初回は npx playwright install chromium)
 ```
+
+## CI(GitHub Actions)
+
+PR 作成・更新時に次のワークフローが動きます。詳細・設定手順は [docs/06_CI_E2E_コードレビュー.md](docs/06_CI_E2E_コードレビュー.md)。
+
+- **E2E** (`.github/workflows/e2e.yml`): 型チェック + ビルド・lint・Playwright E2E をリトライなしで実行。1 件でも失敗すればNG
+- **Claude Code Review** (`.github/workflows/claude-code-review.yml`): Claude Code 公式 code-review プラグインで PR をレビューしコメント
+
+必要な手動設定: Claude GitHub App のインストール、Secrets `ANTHROPIC_API_KEY` または `CLAUDE_CODE_OAUTH_TOKEN` の登録、ブランチ保護で `E2E / test` を必須チェックに設定。
 
 ## iOS(App Store 配信)
 

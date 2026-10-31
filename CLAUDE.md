@@ -43,7 +43,10 @@ PR 作成前に必ず以下を通すこと。
 ```bash
 npm run build   # 型チェック + 本番ビルド
 npm run lint    # リント
+CI=1 npm run test:e2e -- --retries=0   # E2E(CI と同条件。全件パス必須)
 ```
+
+E2E テストのスキップ・無効化で CI を通すことは禁止。詳細は [docs/06_CI_E2E_コードレビュー.md](docs/06_CI_E2E_コードレビュー.md)。
 
 ## iOS 反映
 
