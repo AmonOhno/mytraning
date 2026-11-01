@@ -1,5 +1,33 @@
 # MyTraining
 
+## アーキテクチャ概要
+
+Web(React + TypeScript)と iOS(Capacitor)で同一の SPA を動かし、データは端末の localStorage に保存する。
+MyOS 連携時のみ、Cloudflare Worker の参照 API へ全記録を送信し、MyOS がそれをポーリングする。
+
+```mermaid
+C4Context
+  title System Context - MyTraining
+
+  Person(user, "トレーニー", "日々のトレーニングを記録し、集計・目標達成度を確認する本人")
+
+  System(mytraining, "MyTraining", "トレーニング記録アプリ(Web / iOS 同一コードベース)。データは端末ローカル保存")
+
+  System_Ext(myos, "MyOS", "外部の個人用システム。参照 API をポーリングしてトレーニング実績を取り込む")
+  System_Ext(cloudflare, "Cloudflare Workers / KV", "MyOS 連携用 参照 API の実行基盤(無料枠)")
+  System_Ext(appstore, "Apple App Store", "iOS アプリの配信")
+
+  Rel(user, mytraining, "記録の入力・閲覧・目標設定", "Web ブラウザ / iOS アプリ")
+  Rel(mytraining, cloudflare, "全記録を Webhook 送信", "HTTPS POST /records")
+  Rel(myos, cloudflare, "サマリー・セッションを参照", "HTTPS GET /summary, /sessions")
+  Rel(mytraining, myos, "JSON エクスポートファイルを手動取込", "ファイル")
+  Rel(appstore, user, "iOS アプリを配信")
+
+  UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+```
+
+Container 図・Component 図・データフロー・ディレクトリ構成は [docs/architecture.md](docs/architecture.md) を参照。
+
 日々のトレーニング記録を入力・蓄積し、MyOS へ連携して自己理解に役立てるアプリ。
 Web(TypeScript)と iOS(Capacitor / App Store 配信用)の同一コードベース構成。
 
@@ -12,6 +40,7 @@ Web(TypeScript)と iOS(Capacitor / App Store 配信用)の同一コードベー�
 | [docs/03_データモデル.md](docs/03_データモデル.md) | エンティティ定義・保存形式 |
 | [docs/04_MyOS連携仕様.md](docs/04_MyOS連携仕様.md) | 連携フォーマット・Webhook 仕様 |
 | [docs/05_iOS_AppStore配信手順.md](docs/05_iOS_AppStore配信手順.md) | Xcode でのビルド・審査提出手順 |
+| [docs/architecture.md](docs/architecture.md) | C4 モデルによるアーキテクチャ図(Context / Container / Component)・データフロー |
 
 ## 機能
 
